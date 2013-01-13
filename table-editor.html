@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Table editor</title>
+    <style type="text/css">
+      body { font-family: Arial;
+             font-size: 16px; }
+      table { border-collapse: collapse }
+      td { border: 1px solid #888888;
+           padding: 6px; min-width: 1em; height: 1em;
+           background-color: #F8FCFF; }
+      th { border: 1px solid #000000;
+           padding: 6px; min-width: 1em; height: 1em;
+           background-color: #DDEEFF;
+           text-align: center;
+           font-weight: bold; }
+      textarea#src { border: solid 1px #000000;
+                     font-family: Monospace;
+                     padding: 4px;
+                     height: 300px;
+                     width: 600px;
+                     white-space: pre;
+                     font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    Table editing commands:
+    <ul>
+      <li>Tab/Shift-Tab: move to next/previous cell</li>
+      <li>Ctrl-Left/Ctrl-Right: swap column with previous/next</li>
+      <li>Ctrl-Up/Ctrl-Down: swap row with previous/next</li>
+      <li>Ctrl-Enter/Ctrl-Shift-Enter: Copies a row/column after current one</li>
+      <li>Ctrl-Backspace/Ctrl-Shift-Backspace: Removes current row/column</li>
+      <li>Ctrl-Space/Ctrl-Shift-Space: Increments/decerements colspan</li>
+      <li>Ctrl-H: Switch cell type between TD/TH</li>
+      <li>Ctrl-J: Change cell alignment left-center-right</li>
+    </ul>
+    <table id="table">
+    </table>
+    <br/>Source<br/>
+    <textarea id="src"></textarea>
+    <script>
+
+var src = document.getElementById("src");
+var table = document.getElementById("table");
+var cell = null;
+var changed = false;
+
+function makeCell(type)
+{
+    var cell = document.createElement(type || "TD");
+
+    cell.onclick = function() {
+        cell.contentEditable = true;
+        cell.focus();
+    };
+
+    cell.onblur = function() {
+        cell.contentEditable = false;
+    };
+
+    cell.onkeydown = function(event) {
+        changed = true;
+        if (event.which == 32 && event.ctrlKey)
+        {
+            if (event.shiftKey)
+            {
+                if (cell.colSpan > 1)
+                {
+                    cell.colSpan -= 1;
+                    cell.parentNode.insertBefore(makeCell(), cell.nextSibling);
+                }
+            }
+            else
+            {
+                if (cell.nextSibling) {
+                    cell.parentNode.removeChild(cell.nextSibling);
+                    cell.colSpan = (cell.colSpan||0) + 1;
+                }
+            }
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        if (event.which == 74 && event.ctrlKey)
+        {
+            var al = ["left", "center", "right"];
+            cell.style.textAlign = (al[1 + al.indexOf(cell.style.textAlign)] || "inherit")
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        if (event.which == 72 && event.ctrlKey)
+        {
+            var nc = makeCell(cell.tagName == "TD" ? "TH" : "TD");
+            cell.parentNode.insertBefore(nc, cell);
+            cell.parentNode.removeChild(cell);
+            nc.textContent = cell.textContent;
+            nc.colSpan = cell.colSpan;
+            nc.click();
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        if (event.which == 13 && event.ctrlKey)
+        {
+            if (event.shiftKey)
+            {
+                var myrow = cell.parentNode.children;
+                var mycol = Array.prototype.slice.call(myrow).indexOf(cell);
+                for (var i=0; i<cell.parentNode.parentNode.children.length; i++)
+                {
+                    var row = cell.parentNode.parentNode.children[i];
+                    row.insertBefore(makeCell(), row.children[mycol].nextSibling);
+                }
+            }
+            else
+            {
+                var newrow = document.createElement("tr");
+                for (var i=0; i<cell.parentNode.children.length; i++)
+                {
+                    var cc = cell.parentNode.children[i];
+                    var nc = makeCell(cc.tagName);
+                    nc.style.cssText = cc.style.cssText;
+                    nc.colSpan = cc.colSpan;
+                    newrow.appendChild(nc);
+                }
+                cell.parentNode.parentNode.insertBefore(newrow, cell.parentNode.nextSibling);
+            }
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        if (event.which == 8 && event.ctrlKey)
+        {
+            if (event.shiftKey)
+            {
+                if (cell.nextSibling) cell.nextSibling.click();
+                var myrow = cell.parentNode.children;
+                var mycol = Array.prototype.slice.call(myrow).indexOf(cell);
+                var rows = Array.prototype.slice.call(cell.parentNode.parentNode.children);
+                for (var i=0; i<rows.length; i++)
+                {
+                    rows[i].removeChild(rows[i].children[mycol]);
+                }
+            }
+            else
+            {
+                if (cell.parentNode.nextSibling)
+                    cell.parentNode.nextSibling.firstChild.click();
+                cell.parentNode.parentNode.removeChild(cell.parentNode);
+            }
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        if (event.which == 9)
+        {
+            if (event.shiftKey)
+            {
+                if (cell.previousSibling)
+                    cell.previousSibling.click();
+                else if (cell.parentNode.previousSibling)
+                    cell.parentNode.previousSibling.lastChild.click();
+            }
+            else
+            {
+                if (cell.nextSibling)
+                    cell.nextSibling.click();
+                else if (cell.parentNode.nextSibling)
+                    cell.parentNode.nextSibling.firstChild.click();
+            }
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        if (event.which == 38)
+        {
+            if (event.ctrlKey)
+            {
+                if (cell.parentNode.previousSibling)
+                {
+                    cell.parentNode.parentNode.insertBefore(
+                        cell.parentNode,
+                        cell.parentNode.previousSibling);
+                    cell.click();
+                }
+                event.stopPropagation();
+                event.preventDefault();
+                return false;
+            }
+        }
+        if (event.which == 40)
+        {
+            if (event.ctrlKey)
+            {
+                if (cell.parentNode.nextSibling)
+                {
+                    cell.parentNode.parentNode.insertBefore(
+                        cell.parentNode,
+                        cell.parentNode.nextSibling.nextSibling);
+                    cell.click();
+                }
+                event.stopPropagation();
+                event.preventDefault();
+                return false;
+            }
+        }
+        if (event.which == 37 && event.ctrlKey)
+        {
+            var myrow = cell.parentNode.children;
+            var mycol = Array.prototype.slice.call(myrow).indexOf(cell);
+            var rows = cell.parentNode.parentNode.children;
+            if (mycol > 0)
+            {
+                for (var i=0; i<rows.length; i++)
+                {
+                    if (rows[i].children.length > mycol)
+                    {
+                        rows[i].insertBefore(rows[i].children[mycol],
+                                             rows[i].children[mycol-1]);
+                    }
+                }
+            }
+            cell.click();
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        if (event.which == 39 && event.ctrlKey)
+        {
+            var myrow = cell.parentNode.children;
+            var mycol = Array.prototype.slice.call(myrow).indexOf(cell);
+            var rows = cell.parentNode.parentNode.children;
+            if (mycol < myrow.length-1)
+            {
+                for (var i=0; i<rows.length; i++)
+                {
+                    if (rows[i].children.length > mycol+1)
+                    {
+                        rows[i].insertBefore(rows[i].children[mycol+1],
+                                             rows[i].children[mycol]);
+                    }
+                }
+            }
+            cell.click();
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    };
+    return cell;
+}
+
+function makeTable(rows, cols)
+{
+    while (table.firstChild)
+        table.removeChild(table.firstChild);
+    for (var i=0; i<rows; i++)
+    {
+        var row = document.createElement("tr");
+        for (var j=0; j<cols; j++)
+            row.appendChild(makeCell());
+        table.appendChild(row);
+    }
+}
+
+makeTable(3, 3); changed = true;
+table.firstChild.firstChild.click();
+
+setInterval(function() {
+    if (changed)
+    {
+        changed = false;
+        var r = "<table>\n";
+        for (var i=0; i<table.children.length; i++)
+        {
+            var row = table.children[i];
+            r += "  <tr>\n";
+            for (var j=0; j<row.children.length; j++)
+            {
+                var cell = row.children[j];
+                r += "    ";
+                r += cell.outerHTML.replace(/ contenteditable=\"[^\"]*\"/g,"");
+                r += "\n";
+            }
+            r += "  </tr>\n";
+        }
+        r += "</table>\n";
+        src.value = r;
+    }
+}, 1000);
+
+    </script>
+  </body>
+</html>
