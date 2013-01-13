@@ -193,8 +193,12 @@ function makeCell(type)
                 for (var i=0; i<cell.parentNode.parentNode.children.length; i++)
                 {
                     var row = cell.parentNode.parentNode.children[i];
-                    row.insertBefore(makeCell(), row.children[mycol].nextSibling);
+                    var cc = row.children[mycol];
+                    var ncc = makeCell(cc.tagName);
+                    ncc.style.cssText = cc.style.cssText;
+                    row.insertBefore(ncc, cc.nextSibling);
                 }
+                cell.nextSibling.click();
             }
             else
             {
@@ -208,6 +212,7 @@ function makeCell(type)
                     newrow.appendChild(nc);
                 }
                 cell.parentNode.parentNode.insertBefore(newrow, cell.parentNode.nextSibling);
+                newrow.firstChild.click();
             }
             event.stopPropagation();
             event.preventDefault();
@@ -217,20 +222,28 @@ function makeCell(type)
         {
             if (event.shiftKey)
             {
-                if (cell.nextSibling) cell.nextSibling.click();
-                var myrow = cell.parentNode.children;
-                var mycol = Array.prototype.slice.call(myrow).indexOf(cell);
-                var rows = Array.prototype.slice.call(cell.parentNode.parentNode.children);
-                for (var i=0; i<rows.length; i++)
+                var nxfocus = (cell.nextSibling || cell.previousSibling);
+                if (nxfocus)
                 {
-                    rows[i].removeChild(rows[i].children[mycol]);
+                    nxfocus.click();
+                    var myrow = cell.parentNode.children;
+                    var mycol = Array.prototype.slice.call(myrow).indexOf(cell);
+                    var rows = Array.prototype.slice.call(cell.parentNode.parentNode.children);
+                    for (var i=0; i<rows.length; i++)
+                    {
+                        rows[i].removeChild(rows[i].children[mycol]);
+                    }
                 }
             }
             else
             {
-                if (cell.parentNode.nextSibling)
-                    cell.parentNode.nextSibling.firstChild.click();
-                cell.parentNode.parentNode.removeChild(cell.parentNode);
+                var nxfocus = (cell.parentNode.nextSibling ||
+                               cell.parentNode.previousSibling);
+                if (nxfocus)
+                {
+                    nxfocus.firstChild.click();
+                    cell.parentNode.parentNode.removeChild(cell.parentNode);
+                }
             }
             event.stopPropagation();
             event.preventDefault();
@@ -364,7 +377,10 @@ setInterval(function() {
             {
                 var cell = row.children[j];
                 r += "    ";
-                r += cell.outerHTML.replace(/ contenteditable=\"[^\"]*\"/g,"");
+                r += (cell.outerHTML
+                      .replace(/ contenteditable=\"[^\"]*\"/g, "")
+                      .replace(/ style=\"\"/g, "")
+                      .replace(/ colspan=\"1\"/g, ""));
                 r += "\n";
             }
             r += "  </tr>\n";
