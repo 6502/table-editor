@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Table editor</title>
     <style type="text/css">
       body { font-family: Arial;
@@ -21,30 +22,99 @@
                      width: 600px;
                      white-space: pre;
                      font-size: 16px; }
+      li { line-height: 1.75em; }
+      span.key { padding-left: 4px;
+                 padding-right: 4px;
+                 border: solid 1px #CCCCCC;
+                 border-radius: 5px;
+                 background-color: #EEEEEE;
+                 font-family: Monospace;
+                 box-shadow: 1px 1px 2px #000000;
+                 margin-left: 2px;
+                 margin-right: 2px; }
+      div.help { display: none;
+                 position: absolute;
+                 font-size: 80%;
+                 top: 0px;
+                 right: 0px;
+                 box-shadow:4px 4px 8px rgba(0,0,0,0.5); }
+      div.f1 { display: none;
+               position: absolute;
+               top: 4px;
+               right: 4px; }
     </style>
   </head>
   <body>
-    Table editing commands:
-    <ul>
-      <li>Tab/Shift-Tab: move to next/previous cell</li>
-      <li>Ctrl-Left/Ctrl-Right: swap column with previous/next</li>
-      <li>Ctrl-Up/Ctrl-Down: swap row with previous/next</li>
-      <li>Ctrl-Enter/Ctrl-Shift-Enter: Copies a row/column after current one</li>
-      <li>Ctrl-Backspace/Ctrl-Shift-Backspace: Removes current row/column</li>
-      <li>Ctrl-Space/Ctrl-Shift-Space: Increments/decerements colspan</li>
-      <li>Ctrl-H: Switch cell type between TD/TH</li>
-      <li>Ctrl-J: Change cell alignment left-center-right</li>
-    </ul>
-    <table id="table">
-    </table>
-    <br/>Source<br/>
-    <textarea id="src"></textarea>
+    <center><h1>HTML5 table editor</h1></center>
+    <div style="position: relative">
+      <div id="f1" class="f1"><span class="key">F1=Help</span></div>
+      <div id="help" class="help">
+        <table>
+          <tr>
+            <th colspan=2>
+              <span style="font-size:130%;">Table editing commands</span>
+            </th>
+          </tr>
+          <tr>
+            <td><span class="key">⇥</span> and
+                <span class="key">Shift</span><span class="key">⇥</span></td>
+            <td>move to next/previous cell</td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">←</span> and
+                <span class="key">Ctrl</span><span class="key">→</span></td>
+            <td>swap column with previous/next</td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">↑</span> and
+                <span class="key">Ctrl</span><span class="key">↓</span></td>
+            <td>swap row with previous/next</td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">↵Enter</span></td>
+            <td>Adds a row after current one, copying formatting options</td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">Shift</span><span class="key">↵Enter</span></td>
+            <td>Adds a column after current one, copying formatting options</td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">←Backspace</span></td>
+            <td>Removes current row</td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">Shift</span><span class="key">←Backspace</span></td>
+            <td>Removes current column</td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">Space</span> and
+                <span class="key">Ctrl</span><span class="key">Shift</span><span class="key">Space</span></td>
+            <td>Increments or decrements <b>colspan</b></td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">H</span></td>
+            <td>Switch cell type between <b>&lt;TD&gt;</b> and <b>&lt;TH&gt;</b></td>
+          </tr>
+          <tr>
+            <td><span class="key">Ctrl</span><span class="key">J</span></td>
+            <td>Change cell justification to <b>Left</b>, <b>Center</b> or <b>Right</b></td>
+          </tr>
+        </table>
+      </div>
+      <br/>
+      <table id="table">
+      </table>
+      <br/>Source<br/>
+      <textarea id="src"></textarea>
+    </div>
     <script>
 
 var src = document.getElementById("src");
 var table = document.getElementById("table");
 var cell = null;
 var changed = false;
+var help = document.getElementById("help");
+var f1 = document.getElementById("f1");
 
 function makeCell(type)
 {
@@ -55,12 +125,24 @@ function makeCell(type)
         cell.focus();
     };
 
+    cell.onfocus = function() {
+        f1.style.display = "block";
+    };
+
     cell.onblur = function() {
+        f1.style.display = "none";
         cell.contentEditable = false;
     };
 
     cell.onkeydown = function(event) {
         changed = true;
+        if (event.which == 112)
+        {
+            help.style.display = (help.style.display == 'block' ? 'none' : 'block');
+            event.stopPropagation();
+            event.preventDefault();
+            return false;
+        }
         if (event.which == 32 && event.ctrlKey)
         {
             if (event.shiftKey)
