@@ -96,6 +96,7 @@ function makeCell(type)
             cell.parentNode.insertBefore(nc, cell);
             cell.parentNode.removeChild(cell);
             nc.textContent = cell.textContent;
+            nc.colSpan = cell.colSpan;
             nc.click();
             event.stopPropagation();
             event.preventDefault();
